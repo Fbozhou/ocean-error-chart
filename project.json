@@ -1,0 +1,17 @@
+{
+  "name": "ocean-error-chart",
+  "uuid": "fcmb0001-5c4b-4d98-a7d9-fcmb0001fcmb",
+  "creatorVersion": "3.8.8",
+  "projectId": "",
+  "scenes": [
+    {
+      "url": "assets/scenes/Main.scene"
+    }
+  ],
+  "platforms": {
+    "wechatgame": {
+      "enabled": true
+    }
+  },
+  "dependencies": {}
+}
