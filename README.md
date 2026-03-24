@@ -67,12 +67,27 @@ ocean-error-chart/
 
 ## 开发进度
 - [x] 项目框架搭建
-- [ ] 核心合成玩法开发
-- [ ] UI场景制作
-- [ ] 后端API对接
+- [x] 核心合成玩法开发
+- [x] UI场景脚本制作
+- [x] 后端API对接
+- [ ] 编辑器场景创建绑定
 - [ ] 性能优化
 - [ ] 真机测试
 - [ ] 提交审核
+
+### 已完成脚本文件
+| 模块 | 文件 | 状态 |
+|------|------|------|
+| 核心数据 | `assets/scripts/core/MarineData.ts` | ✅ |
+| 合成逻辑 | `assets/scripts/game/MergeBoard.ts` | ✅ |
+| 拖拽交互 | `assets/scripts/game/CreatureCell.ts` | ✅ |
+| API管理 | `assets/scripts/net/ApiManager.ts` | ✅ 已适配后端 |
+| 登录启动页 | `assets/scripts/ui/LoginScene.ts` | ✅ |
+| 主合成场景 | `assets/scripts/ui/MainScene.ts` | ✅ |
+| 海域选择 | `assets/scripts/ui/SeaAreaScene.ts` | ✅ |
+| 海错图图鉴 | `assets/scripts/ui/HandbookScene.ts` | ✅ |
+| 海底小院 | `assets/scripts/ui/GardenScene.ts` | ✅ |
+| 每日钓鱼 | `assets/scripts/ui/FishingScene.ts` | ✅ |
 
 ## 后端API地址
 开发环境：`http://dev-api.your-domain.com/api`
