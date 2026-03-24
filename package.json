@@ -1,0 +1,10 @@
+{
+  "name": "ocean-error-chart",
+  "version": "1.0.0",
+  "description": "海错图 国风合成微信小游戏",
+  "main": "",
+  "scripts": {},
+  "keywords": ["cocos-creator", "wechat-mini-game", "ocean-error-chart"],
+  "author": "多虾团队",
+  "license": "MIT"
+}
