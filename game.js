@@ -80,7 +80,13 @@ function initGame() {
   // 保存全局引用给其他模块
   window.roundRect = roundRect;
 
-  // 初始化模块
+  // 初始化模块 - 确保类已经加载到window
+  const MergeBoard = window.MergeBoard;
+  const Renderer = window.Renderer;
+  const HandbookScene = window.HandbookScene;
+  const FishingScene = window.FishingScene;
+  const GardenScene = window.GardenScene;
+
   game.board = new MergeBoard(5);
   game.renderer = new Renderer(game.canvas, game.ctx, game.board);
   game.handbook = new HandbookScene();
