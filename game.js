@@ -955,6 +955,8 @@ function handleTouchStart(e) {
     var pos = game.renderer.getGridPosition(x, y);
     if (pos && game.board.grid[pos.r][pos.c]) {
       game.dragStart = pos;
+      game.dragCurrentX = x;
+      game.dragCurrentY = y;
       game.isDragging = true;
     }
   } else if (game.currentScene === 'fishing') {
