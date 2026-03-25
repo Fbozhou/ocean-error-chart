@@ -371,17 +371,25 @@ Renderer.prototype.drawTopUI = function(game) {
   this.ctx.textAlign = 'left';
   this.ctx.fillText('饵料: ' + game.bait, 25, boardBottom + 48);
 
-  this.ctx.fillStyle = '#ffffff';
-  this.ctx.font = '14px sans-serif';
-  this.ctx.textAlign = 'right';
-  var hint = '';
-  switch (game.currentScene) {
-    case 'merge': hint = '拖动相同生物合成'; break;
-    case 'handbook': hint = '海错图图鉴'; break;
-    case 'fishing': hint = '每日奇遇'; break;
-    case 'garden': hint = '海底小院'; break;
+  // 一键整理按钮提示
+  if (game.currentScene === 'merge') {
+    this.ctx.fillStyle = '#64C8FF';
+    this.ctx.font = '14px sans-serif';
+    this.ctx.textAlign = 'right';
+    this.ctx.fillText('整理', this.width - 25, boardBottom + 48);
+  } else {
+    this.ctx.fillStyle = '#ffffff';
+    this.ctx.font = '14px sans-serif';
+    this.ctx.textAlign = 'right';
+    var hint = '';
+    switch (game.currentScene) {
+      case 'merge': hint = '拖动相同生物合成'; break;
+      case 'handbook': hint = '海错图图鉴'; break;
+      case 'fishing': hint = '每日奇遇'; break;
+      case 'garden': hint = '海底小院'; break;
+    }
+    this.ctx.fillText(hint, this.width - 25, boardBottom + 48);
   }
-  this.ctx.fillText(hint, this.width - 25, boardBottom + 48);
 };
 
 Renderer.prototype.drawBottomNav = function(game) {
@@ -417,13 +425,21 @@ Renderer.prototype.drawBottomNav = function(game) {
 Renderer.prototype.getGridPosition = function(clientX, clientY) {
   var offsetX = this.boardOffset.x;
   var offsetY = this.boardOffset.y;
+
+  // 计算格子坐标，增加边界容错，稍微超出一点也算命中
   var c = Math.floor((clientX - offsetX) / this.cellSize);
   var r = Math.floor((clientY - offsetY) / this.cellSize);
 
-  if (r >= 0 && r < this.board.size && c >= 0 && c < this.board.size) {
-    return { r: r, c: c };
+  // 允许稍微超出一点点，提高命中率
+  if (r < -1 || r >= this.board.size + 1 || c < -1 || c >= this.board.size + 1) {
+    return null;
   }
-  return null;
+
+  // clamp 到有效范围
+  r = Math.max(0, Math.min(this.board.size - 1, r));
+  c = Math.max(0, Math.min(this.board.size - 1, c));
+
+  return { r: r, c: c };
 };
 
 Renderer.prototype.getNavItem = function(clientX, clientY) {
@@ -910,6 +926,16 @@ function handleTouchStart(e) {
     return;
   }
 
+  // 点击整理按钮
+  if (game.currentScene === 'merge') {
+    var boardBottom = game.renderer.boardOffset.y + game.renderer.board.size * game.renderer.cellSize;
+    if (y > boardBottom + 10 && y < boardBottom + 70 && x > game.renderer.width - 100) {
+      autoCollapse();
+      render();
+      return;
+    }
+  }
+
   if (game.currentScene === 'merge') {
     var pos = game.renderer.getGridPosition(x, y);
     if (pos && game.board.grid[pos.r][pos.c]) {
@@ -954,11 +980,31 @@ function handleTouchEnd(e) {
   var y = e.changedTouches[0].clientY;
   var endPos = game.renderer.getGridPosition(x, y);
 
-  if (endPos && game.dragStart && endPos.r === game.dragStart.r && endPos.c === game.dragStart.c) {
-  } else if (endPos && !game.board.grid[endPos.r][endPos.c]) {
+  // 如果没有找到有效位置，取消拖拽
+  if (!endPos) {
+    game.isDragging = false;
+    game.dragStart = null;
+    game.dragEnd = null;
+    render();
+    return;
+  }
+
+  // 起点 == 终点，未移动，不处理
+  if (endPos.r === game.dragStart.r && endPos.c === game.dragStart.c) {
+    game.isDragging = false;
+    game.dragStart = null;
+    game.dragEnd = null;
+    render();
+    return;
+  }
+
+  // 目标格子是空的 → 移动过去
+  if (!game.board.grid[endPos.r][endPos.c]) {
     game.board.move(game.dragStart.r, game.dragStart.c, endPos.r, endPos.c);
     spawnNew();
-  } else if (endPos && game.board.grid[endPos.r][endPos.c]) {
+  }
+  // 目标格子已有生物 → 检查等级是否相同，可以合并
+  else if (game.board.grid[endPos.r][endPos.c]) {
     if (game.board.grid[game.dragStart.r][game.dragStart.c].level ===
       game.board.grid[endPos.r][endPos.c].level) {
       var newCreature = game.board.merge(game.dragStart.r, game.dragStart.c, endPos.r, endPos.c);
@@ -980,10 +1026,12 @@ function handleTouchEnd(e) {
         });
       }
     } else {
+      // 等级不同，单纯移动
       game.board.move(game.dragStart.r, game.dragStart.c, endPos.r, endPos.c);
     }
   }
 
+  // 检查游戏是否结束
   if (game.board.isGameOver()) {
     wx.showModal({
       title: '棋盘已满',
