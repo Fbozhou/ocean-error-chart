@@ -19,7 +19,7 @@ class HandbookScene {
     ctx.fillStyle = '#aaaaaa';
     ctx.font = '14px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`${unlockedCreatures.length}/30 已解锁`, width / 2, 65);
+    ctx.fillText(unlockedCreatures.length + '/30 已解锁', width / 2, 65);
 
     const startY = 80;
     const padding = 10;
@@ -41,13 +41,13 @@ class HandbookScene {
         const rarityColor = CREATURE_DATA.getRarityColor(creature.rarity);
         const gradient = ctx.createLinearGradient(x, itemY, x + itemWidth, itemY + this.itemHeight);
         gradient.addColorStop(0, 'rgba(255,255,255,0.15)');
-        gradient.addColorStop(1, `rgba(${this.hexToRgb(rarityColor)},0.2)`);
+        gradient.addColorStop(1, 'rgba(' + this.hexToRgb(rarityColor) + ',0.2)');
         ctx.fillStyle = gradient;
       } else {
         ctx.fillStyle = 'rgba(255,255,255,0.05)';
       }
       ctx.beginPath();
-      ctx.roundRect(x, itemY, itemWidth, this.itemHeight - 10, 8);
+      roundRect(ctx, x, itemY, itemWidth, this.itemHeight - 10, 8);
       ctx.fill();
 
       if (isUnlocked) {
@@ -73,7 +73,7 @@ class HandbookScene {
     ctx.fillText('???', x + width / 2, y + this.itemHeight / 2 - 10);
     ctx.fillStyle = 'rgba(255,255,255,0.2)';
     ctx.font = '12px sans-serif';
-    ctx.fillText(`未解锁`, x + width / 2, y + this.itemHeight / 2 + 15);
+    ctx.fillText('未解锁', x + width / 2, y + this.itemHeight / 2 + 15);
   }
 
   drawUnlockedItem(ctx, x, y, width, creature) {
@@ -83,11 +83,11 @@ class HandbookScene {
     ctx.fillStyle = '#ffffff';
     ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'left';
-    ctx.fillText(`${creature.name}`, x + 12, y + 25);
+    ctx.fillText(creature.name, x + 12, y + 25);
 
     ctx.fillStyle = rarityColor;
     ctx.font = '12px sans-serif';
-    ctx.fillText(`${creature.rarity} · Lv.${creature.level}`, x + 12, y + 42);
+    ctx.fillText(creature.rarity + ' · Lv.' + creature.level, x + 12, y + 42);
 
     // 描述文字
     ctx.fillStyle = 'rgba(255,255,255,0.8)';
@@ -122,7 +122,7 @@ class HandbookScene {
     const r = parseInt(hex.substring(0, 2), 16);
     const g = parseInt(hex.substring(2, 4), 16);
     const b = parseInt(hex.substring(4, 6), 16);
-    return `${r}, ${g}, ${b}`;
+    return r + ', ' + g + ', ' + b;
   }
 
   // 处理滚动

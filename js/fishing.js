@@ -69,7 +69,7 @@ class FishingScene {
     ctx.fillStyle = '#aaaaaa';
     ctx.font = '14px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText(`今日剩余次数: ${this.freeCount}`, width / 2, 75);
+    ctx.fillText('今日剩余次数: ' + this.freeCount, width / 2, 75);
 
     // 绘制鱼竿和水
     this.drawWater(ctx, width, height);
@@ -149,7 +149,7 @@ class FishingScene {
 
       ctx.fillStyle = 'rgba(255,255,255,0.8)';
       ctx.font = '14px sans-serif';
-      ctx.fillText(`${creature.rarity} Lv.${creature.level}', width / 2, centerY + 35);
+      ctx.fillText(creature.rarity + ' Lv.' + creature.level, width / 2, centerY + 35);
     }
 
     ctx.fillStyle = '#aaaaaa';

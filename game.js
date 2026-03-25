@@ -49,24 +49,36 @@ function initGame() {
   game.canvas.width = windowWidth;
   game.canvas.height = windowHeight;
 
-  // 初始化roundRect兼容
-  if (!CanvasRenderingContext2D.prototype.roundRect) {
-    CanvasRenderingContext2D.prototype.roundRect = function (x, y, width, height, radius) {
-      if (typeof radius === 'number') {
-        radius = { tl: radius, tr: radius, br: radius, bl: radius };
-      }
-      this.moveTo(x + radius.tl, y);
-      this.lineTo(x + width - radius.tr, y);
-      this.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
-      this.lineTo(x + width, y + height - radius.br);
-      this.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
-      this.lineTo(x + radius.bl, y + height);
-      this.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
-      this.lineTo(x, y + radius.tl);
-      this.quadraticCurveTo(x, y, x + radius.tl, y);
-      this.closePath();
-    };
+  // 初始化roundRect兼容 - 微信小游戏不支持原型修改，我们自己实现
+  function roundRect(ctx, x, y, width, height, radius) {
+    if (typeof radius === 'number') {
+      radius = { tl: radius, tr: radius, br: radius, bl: radius };
+    }
+    ctx.moveTo(x + radius.tl, y);
+    ctx.lineTo(x + width - radius.tr, y);
+    ctx.quadraticCurveTo(x + width, y, x + width, y + radius.tr);
+    ctx.lineTo(x + width, y + height - radius.br);
+    ctx.quadraticCurveTo(x + width, y + height, x + width - radius.br, y + height);
+    ctx.lineTo(x + radius.bl, y + height);
+    ctx.quadraticCurveTo(x, y + height, x, y + height - radius.bl);
+    ctx.lineTo(x, y + radius.tl);
+    ctx.quadraticCurveTo(x, y, x + radius.tl, y);
+    ctx.closePath();
   }
+  // 添加到原型，如果可以的话
+  try {
+    if (game.ctx.constructor && !game.ctx.constructor.prototype.roundRect) {
+      game.ctx.constructor.prototype.roundRect = function (x, y, width, height, radius) {
+        roundRect(this, x, y, width, height, radius);
+      };
+    }
+  } catch (e) {
+    // 如果修改原型失败，不影响，后面我们手动调用
+    console.log('无法修改Canvas原型，使用兼容方式', e);
+  }
+
+  // 保存全局引用给其他模块
+  window.roundRect = roundRect;
 
   // 初始化模块
   game.board = new MergeBoard(5);

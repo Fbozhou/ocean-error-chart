@@ -60,7 +60,7 @@ class GardenScene {
 
     ctx.fillStyle = '#aaaaaa';
     ctx.font = '14px sans-serif';
-    ctx.fillText(`${this.placedCreatures.length} 只神兽在这里生活', width / 2, 70);
+    ctx.fillText(this.placedCreatures.length + ' 只神兽在这里生活', width / 2, 70);
 
     // 海底沙地
     const sandY = height - 120;
@@ -107,7 +107,7 @@ class GardenScene {
         // 询问是否移除
         wx.showModal({
           title: '移除生物',
-          content: `是否将 ${item.creature.name} 从小院移除？`,
+          content: '是否将 ' + item.creature.name + ' 从小院移除？',
           success: (res) => {
             if (res.confirm) {
               this.removeCreature(i);

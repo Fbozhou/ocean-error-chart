@@ -82,7 +82,7 @@ class Renderer {
         // 格子背景
         this.ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
         this.ctx.beginPath();
-        this.ctx.roundRect(cellX + padding, cellY + padding,
+        roundRect(this.ctx, cellX + padding, cellY + padding,
           this.cellSize - padding * 2, this.cellSize - padding * 2, 8);
         this.ctx.fill();
       }
@@ -123,7 +123,7 @@ class Renderer {
     // 圆角矩形背景
     this.ctx.fillStyle = gradient;
     this.ctx.beginPath();
-    this.ctx.roundRect(x, y, size, size, 12);
+    roundRect(this.ctx, x, y, size, size, 12);
     this.ctx.fill();
 
     // 边框
@@ -134,12 +134,12 @@ class Renderer {
     // 绘制文字（名称）
     this.ctx.fillStyle = '#1a1a1a';
     this.ctx.textAlign = 'center';
-    this.ctx.font = `bold ${Math.floor(size / 5)}px sans-serif`;
+    this.ctx.font = 'bold ' + Math.floor(size / 5) + 'px sans-serif';
     this.ctx.fillText(creature.name, x + size / 2, y + size / 2 + 6);
 
     // 等级
-    this.ctx.font = `${Math.floor(size / 8)}px sans-serif`;
-    this.ctx.fillText(`Lv.${creature.level}`, x + size / 2, y + size - 10);
+    this.ctx.font = Math.floor(size / 8) + 'px sans-serif';
+    this.ctx.fillText('Lv.' + creature.level, x + size / 2, y + size - 10);
   }
 
   // 绘制顶部UI
@@ -154,7 +154,7 @@ class Renderer {
     this.ctx.fillStyle = '#FFD700';
     this.ctx.font = 'bold 20px sans-serif';
     this.ctx.textAlign = 'left';
-    this.ctx.fillText(`饵料: ${gameState.bait}`, 25, boardBottom + 48);
+    this.ctx.fillText('饵料: ' + gameState.bait, 25, boardBottom + 48);
 
     // 提示文字
     this.ctx.fillStyle = '#ffffff';
