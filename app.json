@@ -1,0 +1,8 @@
+{
+  "navigateToMiniProgramAppIdList": [],
+  "permission": {
+    "scope.userInfo": {
+      "desc": "用于微信登录获取用户信息"
+    }
+  }
+}

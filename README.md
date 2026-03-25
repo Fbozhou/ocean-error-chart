@@ -1,96 +1,85 @@
 # 海错图 - 国风合成微信小游戏
 
-> 基于《海错图》+《山海经》打造的国风合成休闲微信小游戏
+《海错图》结合传统文化的轻量治愈合成小游戏，玩家从最低级的磷虾开始，不断合成解锁更高级的海洋生物，最终集齐山海经神兽。
 
-## 项目分工
-| 角色 | 负责人 |
-|------|--------|
-| 项目经理虾（测试） | @大萌虾1 |
-| 需求虾 | @栋栋虾 |
-| 后端开发虾 | @rzf的智能助手 |
-| 前端开发虾 | @前端大虾 |
+## 🎮 游戏玩法
 
-## 技术选型
-- 游戏引擎：**Cocos Creator 3.x**
-- 开发语言：TypeScript
-- 目标平台：微信小游戏
+1. **合成核心**：拖动两个相同等级的海洋生物到一起，合成更高级的生物
+2. **收集图鉴**：每解锁一个新生物，图鉴中会出现它的介绍，来自《海错图》和《山海经》原文
+3. **海底小院**：20级以上神兽可以放到小院中展示饲养
+4. **每日钓鱼**：每天免费钓鱼3次，随机获得饵料和生物
+5. **社交裂变**：分享游戏给好友，双方都获得饵料奖励，每天可以去好友小院蹭饭
 
-## 项目结构
+## 📋 合成进度
+
+总共 **30级** 合成路径：
+
+| 区间 | 类别 | 说明 |
+|------|------|------|
+| 1-10 | 普通海洋生物 | 磷虾、小鱼、螃蟹... |
+| 11-20 | 稀有海洋生物 | 海龟、大王乌贼、大白鲨... |
+| 21-29 | 《山海经》神兽 | 赤鱬、何罗鱼、文鳐鱼... |
+| 30 | 终极 | 蛟龙 |
+
+## 🏗️ 项目结构
+
+这是**微信开发者工具原生项目**，不需要任何构建工具，直接导入即可运行：
+
 ```
 ocean-error-chart/
-├── assets/
-│   ├── scenes/            # 场景文件
-│   │   ├── Boot.scene     # 启动场景
-│   │   ├── Main.scene     # 合成主场景
-│   │   ├── Handbook.scene # 图鉴场景
-│   │   ├── Garden.scene   # 海底小院场景
-│   │   └── Fishing.scene  # 每日钓鱼场景
-│   ├── scripts/
-│   │   ├── core/          # 核心数据结构
-│   │   │   └── MarineData.ts # 生物配置数据
-│   │   ├── game/          # 游戏核心逻辑
-│   │   │   ├── MergeBoard.ts  # 合成棋盘
-│   │   │   └── CreatureCell.ts # 单个生物单元格
-│   │   ├── ui/            # 各个场景UI脚本
-│   │   │   ├── MainScene.ts
-│   │   │   ├── HandbookScene.ts
-│   │   │   ├── GardenScene.ts
-│   │   │   └── FishingScene.ts
-│   │   └── net/           # 网络请求
-│   │       └── ApiManager.ts # API接口管理
-│   ├── resources/         # 资源文件
-│   └── textures/          # 纹理图片
-├── build/                 # 微信小游戏构建输出
-└── package.json
+├── app.js                 # 小游戏入口 + API封装
+├── app.json               # 小游戏配置
+├── game.js                # 主游戏逻辑入口
+├── game.json              # 游戏窗口配置
+├── game.html              # HTML入口（引入脚本）
+├── project.config.json   # 微信开发者工具项目配置
+├── js/
+│   ├── data.js           # 30级生物数据（带科普文案）
+│   ├── merge-board.js    # 合成棋盘核心逻辑
+│   ├── renderer.js       # Canvas渲染器
+│   ├── handbook.js       # 海错图图鉴场景
+│   ├── fishing.js        # 每日钓鱼奇遇
+│   └── garden.js         # 海底小院场景
+└── README.md
 ```
 
-## 开发环境准备
-1. 安装 [Cocos Creator 3.x](https://www.cocos.com/creator)
-2. 克隆本项目
-3. 使用 Cocos Creator 打开项目
-4. 在 项目 → 项目构建 中选择「微信小游戏」平台，配置 appid
-5. 构建之后，使用微信开发者工具打开 `build/wechat-miniprogram` 目录进行调试
+## 🚀 导入运行
 
-## 功能模块
-- ✅ 核心合成玩法（5x5棋盘拖拽合成）
-- ✅ 海错图图鉴收集 + 科普文案
-- ✅ 海底小院神兽放置展示
-- ✅ 每日钓鱼奇遇
-- ✅ 社交裂变蹭饵料
-- ✅ 离线收益
+1. 打开微信开发者工具
+2. 选择「小游戏」项目
+3. 导入当前目录
+4. 使用测试号 `touristappid` 即可预览
 
-## 性能要求
-- 包体大小 ≤ 10MB
-- 加载时间 ≤ 3s
-- 低端机运行帧率 ≥ 30FPS
-- 兼容 iOS 12+ / Android 8+
+**注意**：需要将 `app.js` 中的 `apiBaseUrl` 改为你的后端接口地址。
 
-## 开发进度
-- [x] 项目框架搭建
-- [x] 核心合成玩法开发
-- [x] UI场景脚本制作
-- [x] 后端API对接
-- [ ] 编辑器场景创建绑定
-- [ ] 性能优化
-- [ ] 真机测试
-- [ ] 提交审核
+## ✨ 功能特性
 
-### 已完成脚本文件
-| 模块 | 文件 | 状态 |
-|------|------|------|
-| 核心数据 | `assets/scripts/core/MarineData.ts` | ✅ |
-| 合成逻辑 | `assets/scripts/game/MergeBoard.ts` | ✅ |
-| 拖拽交互 | `assets/scripts/game/CreatureCell.ts` | ✅ |
-| API管理 | `assets/scripts/net/ApiManager.ts` | ✅ 已适配后端 |
-| 登录启动页 | `assets/scripts/ui/LoginScene.ts` | ✅ |
-| 主合成场景 | `assets/scripts/ui/MainScene.ts` | ✅ |
-| 海域选择 | `assets/scripts/ui/SeaAreaScene.ts` | ✅ |
-| 海错图图鉴 | `assets/scripts/ui/HandbookScene.ts` | ✅ |
-| 海底小院 | `assets/scripts/ui/GardenScene.ts` | ✅ |
-| 每日钓鱼 | `assets/scripts/ui/FishingScene.ts` | ✅ |
+- ✅ 纯原生 Canvas 2D 绘制，无第三方依赖，包体极小
+- ✅ 完整核心合成玩法，5x5 棋盘
+- ✅ 海错图图鉴，带《海错图》/《山海经》原文科普
+- ✅ 每日钓鱼奇遇系统
+- ✅ 海底小院神兽展示
+- ✅ 自适应分辨率，支持横竖屏切换
+- ✅ 符合微信小游戏运营规范
 
-## 后端API地址
-开发环境：`http://dev-api.your-domain.com/api`
-生产环境：`https://api.your-domain.com/api`
+## 📦 包体积
 
-修改位置：`assets/scripts/net/ApiManager.ts` 中 `baseUrl`
+当前项目全部文件加起来不到 **200KB**，远小于微信小游戏要求的 10MB 限制，可以放心发布。
+
+## 🎨 国风特色
+
+- 深海渐变背景，水泡波纹动画
+- 按稀有度区分颜色
+- 保留原文文案，传播传统文化
+- 治愈轻量，碎片化时间随时玩
+
+## 🔧 开发计划
+
+- [ ] 神兽皮肤系统
+- [ ] 更多小院装饰道具
+- [ ] 排行榜
+- [ ] 成就系统
+
+## 📄 许可证
+
+MIT
