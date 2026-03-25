@@ -117,7 +117,7 @@ class FishingScene {
       ctx.beginPath();
       ctx.moveTo(40, waterY + 50 + i * 40);
       for (let x = 40; x < width - 40; x += 20) {
-        const y = waterY + 50 + i * 40 + Math.sin((x + this.castingProgress) * 5;
+        const y = waterY + 50 + i * 40 + Math.sin((x + this.castingProgress) * 5);
         ctx.lineTo(x, y);
       }
       ctx.stroke();
@@ -134,7 +134,7 @@ class FishingScene {
       ctx.fillText('获得饵料', width / 2, centerY - 30);
       ctx.fillStyle = '#ffffff';
       ctx.font = '36px sans-serif';
-      ctx.fillText(`+${this.result.amount} 🥢', width / 2, centerY + 20);
+      ctx.fillText('+' + this.result.amount + ' 🥢', width / 2, centerY + 20);
     } else {
       const creature = this.result.creature;
       ctx.fillStyle = '#ffffff';

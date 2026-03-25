@@ -354,10 +354,8 @@ wx.onDeviceOrientationChange(() => {
   render();
 });
 
-// 游戏入口
-wx.onGameReady(() => {
-  initGame();
-});
+// 游戏入口 - 微信小游戏直接执行初始化
+initGame();
 
 // 导出方法供分享等回调
 window.OceanErrorGame = {

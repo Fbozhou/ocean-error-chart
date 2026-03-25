@@ -90,7 +90,7 @@ class GardenScene {
 
       // 名称
       ctx.fillStyle = '#1a1a1a';
-      ctx.font = `bold ${Math.floor(size / 4)}px sans-serif`;
+      ctx.font = 'bold ' + Math.floor(size / 4) + 'px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillText(creature.name, x, y + 5);
     });
@@ -99,26 +99,26 @@ class GardenScene {
   // 处理点击，点击生物可以移除
   handleTap(x, y) {
     for (let i = this.placedCreatures.length - 1; i >= 0; i--) {
-    const item = this.placedCreatures[i];
-    const dx = x - item.x;
-    const dy = y - item.y;
-    const dist = Math.sqrt(dx * dx + dy * dy);
-    if (dist < item.size / 2) {
-      // 询问是否移除
-      wx.showModal({
-        title: '移除生物',
-        content: `是否将 ${item.creature.name} 从小院移除？`,
-        success: (res) => {
-          if (res.confirm) {
-            this.removeCreature(i);
+      const item = this.placedCreatures[i];
+      const dx = x - item.x;
+      const dy = y - item.y;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (dist < item.size / 2) {
+        // 询问是否移除
+        wx.showModal({
+          title: '移除生物',
+          content: `是否将 ${item.creature.name} 从小院移除？`,
+          success: (res) => {
+            if (res.confirm) {
+              this.removeCreature(i);
+            }
           }
-        }
-      });
-      return true;
+        });
+        return true;
+      }
     }
+    return false;
   }
-  return false;
-}
 }
 
 window.GardenScene = GardenScene;
