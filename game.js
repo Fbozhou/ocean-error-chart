@@ -893,15 +893,15 @@ function initGame() {
 
 // ========== 事件绑定 ==========
 function bindEvents() {
-  // 微信小游戏直接绑定，不需要提前off
-  game.canvas.onTouchStart(handleTouchStart);
-  game.canvas.onTouchMove(handleTouchMove);
-  game.canvas.onTouchEnd(handleTouchEnd);
+  // 微信小游戏触摸事件绑定在wx对象上
+  wx.onTouchStart(handleTouchStart);
+  wx.onTouchMove(handleTouchMove);
+  wx.onTouchEnd(handleTouchEnd);
 }
 
 function handleTouchStart(e) {
-  var x = e.touches[0].x;
-  var y = e.touches[0].y;
+  var x = e.touches[0].clientX;
+  var y = e.touches[0].clientY;
 
   var navItem = game.renderer.getNavItem(x, y);
   if (navItem) {
@@ -935,8 +935,8 @@ function handleTouchMove(e) {
     return;
   }
 
-  var x = e.touches[0].x;
-  var y = e.touches[0].y;
+  var x = e.touches[0].clientX;
+  var y = e.touches[0].clientY;
   var endPos = game.renderer.getGridPosition(x, y);
   game.dragEnd = endPos;
   render();
@@ -950,8 +950,8 @@ function handleTouchEnd(e) {
     return;
   }
 
-  var x = e.changedTouches[0].x;
-  var y = e.changedTouches[0].y;
+  var x = e.changedTouches[0].clientX;
+  var y = e.changedTouches[0].clientY;
   var endPos = game.renderer.getGridPosition(x, y);
 
   if (endPos && game.dragStart && endPos.r === game.dragStart.r && endPos.c === game.dragStart.c) {
