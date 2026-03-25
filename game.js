@@ -270,6 +270,19 @@ Renderer.prototype.render = function(game) {
   if (game.currentScene === 'merge') {
     this.drawBoard();
     this.drawCreatures();
+    // 绘制正在拖拽的生物，跟随手指移动
+    if (game.isDragging && game.dragStart) {
+      var creature = game.board.grid[game.dragStart.r][game.dragStart.c];
+      if (creature) {
+        var size = this.cellSize - 8;
+        var x = game.dragCurrentX - size / 2;
+        var y = game.dragCurrentY - size / 2;
+        // 半透明绘制跟随
+        ctx.globalAlpha = 0.8;
+        this.drawCreatureCell(x, y, size, creature);
+        ctx.globalAlpha = 1;
+      }
+    }
   } else if (game.currentScene === 'handbook') {
     game.handbook.render(ctx, width, height, game.unlockedCreatures);
   } else if (game.currentScene === 'fishing') {
@@ -871,6 +884,8 @@ var game = {
   mergedCount: 0,
 
   dragStart: null,
+  dragCurrentX: 0,
+  dragCurrentY: 0,
   isDragging: false,
   dragEnd: null,
 
@@ -963,6 +978,8 @@ function handleTouchMove(e) {
 
   var x = e.touches[0].clientX;
   var y = e.touches[0].clientY;
+  game.dragCurrentX = x;
+  game.dragCurrentY = y;
   var endPos = game.renderer.getGridPosition(x, y);
   game.dragEnd = endPos;
   render();
