@@ -893,10 +893,7 @@ function initGame() {
 
 // ========== 事件绑定 ==========
 function bindEvents() {
-  game.canvas.offTouchStart();
-  game.canvas.offTouchMove();
-  game.canvas.offTouchEnd();
-
+  // 微信小游戏直接绑定，不需要提前off
   game.canvas.onTouchStart(handleTouchStart);
   game.canvas.onTouchMove(handleTouchMove);
   game.canvas.onTouchEnd(handleTouchEnd);
