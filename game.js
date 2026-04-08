@@ -1,5 +1,9 @@
 // 《海错图》国风合成微信小游戏
-// 单文件版本 - 避免微信小游戏加载顺序问题
+// 对接后端API版本
+
+// 引入API模块
+const api = require('./js/api.js');
+const app = getApp();
 
 // ========== 工具函数: roundRect ==========
 function roundRect(ctx, x, y, width, height, radius) {
@@ -78,12 +82,42 @@ function getRarityColor(rarity) {
   return colors[rarity] || '#FFFFFF';
 }
 
+function getCreatureById(id) {
+  for (var i = 0; i < CREATURES.length; i++) {
+    if (CREATURES[i].id === id) return CREATURES[i];
+  }
+  return null;
+}
+
 var CREATURE_DATA = {
   CREATURES: CREATURES,
   getCreatureByLevel: getCreatureByLevel,
+  getCreatureById: getCreatureById,
   canMerge: canMerge,
   mergeResult: mergeResult,
-  getRarityColor: getRarityColor
+  getRarityColor: getRarityColor,
+  
+  // 从后端更新生物数据（如果后端返回了新配置）
+  updateFromBackend: function(allCreatures) {
+    if (!allCreatures || !allCreatures.length) return;
+    
+    // 用后端数据补充本地数据，如果后端有的话
+    allCreatures.forEach(function(creature) {
+      var exists = getCreatureById(creature.id);
+      if (!exists) {
+        CREATURES.push({
+          id: creature.id,
+          level: creature.level,
+          name: creature.name,
+          description: creature.description,
+          color: creature.color || getRarityColor(creature.rarity),
+          rarity: creature.rarity || '普通'
+        });
+      }
+    });
+    
+    console.log('生物数据更新完成，总计: ' + CREATURES.length + ' 种');
+  }
 };
 
 // ========== 2. 合成棋盘类 ==========
@@ -599,7 +633,17 @@ function FishingScene() {
   this.castingProgress = 0;
   this.result = null;
   this.freeCount = 3;
+  
+  // 初始化时从后端获取剩余次数
+  this.loadRemainingCount();
 }
+
+FishingScene.prototype.loadRemainingCount = function() {
+  if (!app.globalData.userId) return;
+  api.fish.getRemaining(app.globalData.userId, function(count) {
+    this.freeCount = count;
+  }.bind(this));
+};
 
 FishingScene.prototype.resetDaily = function(freeCount) {
   this.freeCount = freeCount || 3;
@@ -618,7 +662,6 @@ FishingScene.prototype.cast = function() {
 
   this.state = 'casting';
   this.castingProgress = 0;
-  this.freeCount--;
   return true;
 };
 
@@ -632,19 +675,28 @@ FishingScene.prototype.update = function() {
 };
 
 FishingScene.prototype.pull = function() {
-  var rand = Math.random();
-  if (rand < 0.6) {
-    this.result = { type: 'bait', amount: 50 + Math.floor(Math.random() * 100) };
-  } else if (rand < 0.9) {
-    var level = 1 + Math.floor(Math.random() * 10);
-    var creature = CREATURE_DATA.getCreatureByLevel(level);
-    this.result = { type: 'creature', creature: creature };
-  } else {
-    var level = 10 + Math.floor(Math.random() * 15);
-    var creature = CREATURE_DATA.getCreatureByLevel(level);
-    this.result = { type: 'creature', creature: creature };
-  }
-  this.state = 'result';
+  // 调用后端钓鱼接口
+  api.fish.doFish(app.globalData.userId, function(result) {
+    this.freeCount = result.remainingTimes;
+    
+    if (result.success) {
+      if (result.rewardType === 'bait') {
+        // 奖励饵料
+        game.bait += result.baitAmount;
+        app.globalData.bait = game.bait;
+        this.result = { type: 'bait', amount: result.baitAmount };
+      } else if (result.rewardType === 'creature' || result.rewardType === 'rare') {
+        // 奖励生物
+        var creature = CREATURE_DATA.getCreatureById(result.creatureId);
+        if (creature && game.unlockedCreatures.indexOf(creature.id) < 0) {
+          unlockCreature(creature);
+        }
+        this.result = { type: 'creature', creature: creature, isRare: result.rewardType === 'rare' };
+      }
+    }
+    
+    this.state = 'result';
+  }.bind(this));
 };
 
 FishingScene.prototype.render = function(ctx, width, height) {
@@ -754,26 +806,88 @@ FishingScene.prototype.handleTap = function() {
 
 // ========== 6. 海底小院 ==========
 function GardenScene() {
+  this.slots = []; // 槽位信息 [{id, slotId, creatureId, creatureName, creatureImageUrl, isUnlocked}, ...]
   this.placedCreatures = [];
   this.width = 0;
   this.height = 0;
+  
+  // 从后端加载庭院信息
+  this.loadFromBackend();
 }
 
+GardenScene.prototype.loadFromBackend = function() {
+  if (!app.globalData.userId) return;
+  api.yard.getYardInfo(app.globalData.userId, function(slots) {
+    this.slots = slots || [];
+    // 同步到展示列表
+    this.placedCreatures = [];
+    slots.forEach(function(slot) {
+      if (slot.creatureId && slot.isUnlocked) {
+        var creature = CREATURE_DATA.getCreatureById(slot.creatureId);
+        if (creature) {
+          var x = 50 + Math.random() * (this.width - 100);
+          var y = 150 + Math.random() * (this.height - 250);
+          this.placedCreatures.push({
+            creature: creature,
+            x: x,
+            y: y,
+            size: 80 + Math.random() * 40,
+            floatOffset: Math.random() * Math.PI * 2,
+            slotId: slot.slotId
+          });
+        }
+      }
+    }, this);
+    console.log('庭院加载完成，槽位数: ' + this.slots.length);
+  }.bind(this));
+};
+
+GardenScene.prototype.placeCreature = function(slotId, creatureId) {
+  if (!app.globalData.userId) return false;
+  api.yard.placeCreature(app.globalData.userId, slotId, creatureId, function(success) {
+    if (success) {
+      this.loadFromBackend(); // 重新加载
+      wx.showToast({
+        title: '放置成功',
+        icon: 'success'
+      });
+    }
+  }.bind(this));
+};
+
+GardenScene.prototype.unlockSlot = function(slotId, cost) {
+  if (!app.globalData.userId || game.bait < cost) {
+    if (game.bait < cost) {
+      wx.showToast({ title: '饵料不足', icon: 'none' });
+    }
+    return false;
+  }
+  api.yard.unlockSlot(app.globalData.userId, slotId, cost, function(success) {
+    if (success) {
+      game.bait -= cost;
+      app.globalData.bait = game.bait;
+      this.loadFromBackend();
+      wx.showToast({
+        title: '解锁成功',
+        icon: 'success'
+      });
+    }
+  }.bind(this));
+};
+
 GardenScene.prototype.addCreature = function(creature) {
-  var x = 50 + Math.random() * (this.width - 100);
-  var y = 150 + Math.random() * (this.height - 250);
-  this.placedCreatures.push({
-    creature: creature,
-    x: x,
-    y: y,
-    size: 80 + Math.random() * 40,
-    floatOffset: Math.random() * Math.PI * 2
-  });
+  // 神兽合成后添加到可用，实际位置由后端存储
+  var emptySlot = this.slots.find(s => s.isUnlocked && !s.creatureId);
+  if (emptySlot) {
+    this.placeCreature(emptySlot.slotId, creature.id);
+  }
   return true;
 };
 
 GardenScene.prototype.removeCreature = function(index) {
   if (index >= 0 && index < this.placedCreatures.length) {
+    var item = this.placedCreatures[index];
+    this.placeCreature(item.slotId, null);
     this.placedCreatures.splice(index, 1);
     return true;
   }
@@ -1026,24 +1140,73 @@ function handleTouchEnd(e) {
   else if (game.board.grid[endPos.r][endPos.c]) {
     if (game.board.grid[game.dragStart.r][game.dragStart.c].level ===
       game.board.grid[endPos.r][endPos.c].level) {
-      var newCreature = game.board.merge(game.dragStart.r, game.dragStart.c, endPos.r, endPos.c);
-      if (newCreature) {
-        unlockCreature(newCreature.level);
-        game.bait += Math.floor(newCreature.level * 2);
-        game.mergedCount++;
-
-        if (newCreature.level >= 20) {
-          game.garden.addCreature(newCreature);
+      
+      // 从格子获取生物ID
+      const id1 = game.board.grid[game.dragStart.r][game.dragStart.c].id;
+      const id2 = game.board.grid[endPos.r][endPos.c].id;
+      
+      // 调用后端合成接口
+      api.combine.doCombine(app.globalData.userId, id1, id2, function(result) {
+        if (result.success) {
+          // 合成成功，移除原来两个生物
+          game.board.remove(game.dragStart.r, game.dragStart.c);
+          game.board.remove(endPos.r, endPos.c);
+          
+          // 添加新生物
+          const newCreature = CREATURE_DATA.getCreatureById(result.resultCreatureId);
+          game.board.place(endPos.r, endPos.c, newCreature);
+          
+          // 更新饵料
+          game.bait = result.remainingBait;
+          app.globalData.bait = result.remainingBait;
+          
+          if (result.isNewUnlock) {
+            unlockCreature(newCreature);
+            game.unlockedCreatures.push(result.resultCreatureId);
+          }
+          
+          game.mergedCount++;
+          
+          if (newCreature.level >= 20) {
+            game.garden.addCreature(newCreature);
+          }
+          
+          wx.vibrateShort({ type: 'light' });
+          spawnNew();
+          
+          wx.showToast({
+            title: '合成成功！' + newCreature.name,
+            icon: 'none'
+          });
+        } else {
+          // 合成失败，单纯移动
+          game.board.move(game.dragStart.r, game.dragStart.c, endPos.r, endPos.c);
         }
+        
+        game.isDragging = false;
+        game.dragStart = null;
+        game.dragEnd = null;
 
-        wx.vibrateShort({ type: 'light' });
-        spawnNew();
-
-        wx.showToast({
-          title: '合成成功！' + newCreature.name,
-          icon: 'none'
-        });
-      }
+        // 检查游戏是否结束
+        if (game.board.isGameOver()) {
+          wx.showModal({
+            title: '棋盘已满',
+            content: '没有可合并的生物了，是否清空重开？',
+            success: function(res) {
+              if (res.confirm) {
+                game.board.clear();
+                game.board.spawnRandom(1);
+                game.board.spawnRandom(1);
+              }
+            }
+          });
+        }
+        
+        render();
+      });
+      
+      // 异步处理，提前返回
+      return;
     } else {
       // 等级不同，单纯移动
       game.board.move(game.dragStart.r, game.dragStart.c, endPos.r, endPos.c);
@@ -1085,21 +1248,22 @@ function spawnNew() {
   if (emptyCount === 0) return false;
 
   game.bait--;
+  app.globalData.bait = game.bait;
   var level = Math.random() > 0.9 ? 2 : 1;
   game.board.spawnRandom(level);
   return true;
 }
 
-function unlockCreature(level) {
-  if (game.unlockedCreatures.indexOf(level) < 0) {
-    game.unlockedCreatures.push(level);
-    var creature = CREATURE_DATA.getCreatureByLevel(level);
+function unlockCreature(creature) {
+  if (game.unlockedCreatures.indexOf(creature.id) < 0) {
+    game.unlockedCreatures.push(creature.id);
     wx.showToast({
       title: '解锁新生物：' + creature.name,
       icon: 'none',
       duration: 2000
     });
-    game.bait += level;
+    game.bait += creature.level;
+    app.globalData.bait = game.bait;
   }
 }
 
@@ -1144,6 +1308,22 @@ wx.onDeviceOrientationChange(function() {
   game.garden.resize(game.width, game.height);
   render();
 });
+
+// 从后端加载全量生物数据和用户数据
+function loadDataFromBackend() {
+  // 加载全量生物配置
+  api.combine.getAllList(function(allCreatures) {
+    // 更新本地CREATURE_DATA
+    CREATURE_DATA.updateFromBackend(allCreatures);
+    
+    // 加载用户已解锁生物
+    api.combine.getUserList(app.globalData.userId, function(userCreatures) {
+      game.unlockedCreatures = userCreatures.map(c => c.id);
+      game.allCreaturesLoaded = true;
+      console.log('后端数据加载完成，已解锁生物数: ' + game.unlockedCreatures.length);
+    });
+  });
+}
 
 // 启动游戏
 initGame();
