@@ -326,6 +326,16 @@ function handleMouseUp() {
     return;
   }
   
+  // 禁止拖拽到**同一个格子自己合并自己**
+  if (endCell.x === dragCell.x && endCell.y === dragCell.y) {
+    // 落点是起点自己，不操作，直接取消拖拽
+    dragCell = null;
+    isTouching = false;
+    game.isDragging = false;
+    render();
+    return;
+  }
+  
   if (!game.board[endCell.y][endCell.x]) {
     // 落点在**空格** - 把拖拽的生物移动到空格，**因为关闭自动生成，所以不再起点生成新生物**
     // 移动生物从dragCell to endCell
