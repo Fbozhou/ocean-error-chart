@@ -52,6 +52,36 @@ const user = {
   }
 };
 
+// 游戏状态模块
+const game = {
+  // 保存游戏状态
+  save(userId, board, score, callback) {
+    app.request({
+      url: '/game/save',
+      method: 'POST',
+      data: {
+        userId,
+        board,
+        score
+      },
+      success: res => {
+        callback && callback(res);
+      }
+    });
+  },
+
+  // 加载游戏状态
+  load(userId, callback) {
+    app.request({
+      url: `/game/load/${userId}`,
+      method: 'GET',
+      success: res => {
+        callback && callback(res);
+      }
+    });
+  }
+};
+
 // 合成模块
 const combine = {
   // 执行合成操作
@@ -264,5 +294,6 @@ module.exports = {
   fish,
   yard,
   social,
-  illustration
+  illustration,
+  game
 };

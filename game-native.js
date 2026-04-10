@@ -107,51 +107,78 @@ function initGameAfterLogin() {
     window.api.combine.getUserList(userId, function(result) {
       console.log('[API] 获取用户已解锁生物返回:', result);
       
-      // 初始化棋盘 - 必须在resize/render之前！
-      game.board = window.createEmptyBoard();
-      
-      // 从后端加载用户已解锁生物
-      if (result && result.code === 200 && result.data && Array.isArray(result.data)) {
-        game.unlockedCreatures = result.data;
-        console.log('[API] 用户已解锁生物:', result.data.length, '个');
-      } else {
-        // 初始解锁 1级磷虾
-        game.unlockedCreatures = [1];
-      }
-      
-      // 初始化生成三个生物：**两个固定1级磷虾，第三个随机**
-      let placed = 0;
-      // 放两个固定磷虾到最左下
-      for (let y = window.BOARD_SIZE - 1; y >= window.BOARD_SIZE - 2 && placed < 2; y--) {
-        for (let x = 0; x < 2 && placed < 2; x++) {
-          if (!game.board[y][x]) {
-            game.board[y][x] = 1; // 1 = 磷虾 id=1 level=1
-            placed++;
+      // 从后端加载游戏状态（棋盘+分数）
+      window.api.game.load(userId, function(result) {
+        console.log('[API] 加载游戏状态返回:', result);
+        
+        // 初始化棋盘 - 必须在resize/render之前！
+        game.board = window.createEmptyBoard();
+        
+        // 加载用户已解锁生物
+        if (result && result.code === 200 && result.data) {
+          if (Array.isArray(result.data.unlockedCreatures)) {
+            game.unlockedCreatures = result.data.unlockedCreatures;
+            console.log('[API] 用户已解锁生物:', game.unlockedCreatures.length, '个');
           }
+          // 从后端加载棋盘和分数
+          if (result.data.board && Array.isArray(result.data.board)) {
+            game.board = result.data.board;
+            console.log('[API] 从后端加载棋盘成功');
+          }
+          if (typeof result.data.score === 'number') {
+            game.score = result.data.score;
+            console.log('[API] 从后端加载分数成功:', game.score);
+          }
+        } else {
+          // 加载失败，走默认初始化
+          // 初始解锁 1级磷虾
+          game.unlockedCreatures = [1];
+          // 初始化生成三个生物：**两个固定1级磷虾，第三个随机**
+          let placed = 0;
+          // 放两个固定磷虾到最左下
+          for (let y = window.BOARD_SIZE - 1; y >= window.BOARD_SIZE - 2 && placed < 2; y--) {
+            for (let x = 0; x < 2 && placed < 2; x++) {
+              if (!game.board[y][x]) {
+                game.board[y][x] = 1; // 1 = 磷虾 id=1 level=1
+                placed++;
+              }
+            }
+          }
+          // 第三个随机生成
+          window.spawnRandomCreature(game.board, getCurrentMaxLevel());
+          // 默认分数
+          game.score = 30;
         }
-      }
-      // 第三个随机生成
-      window.spawnRandomCreature(game.board, getCurrentMaxLevel());
-      
-      // 初始化小院
-      game.garden.slots = JSON.parse(localStorage.getItem('ocean-garden-slots')) || window.DEFAULT_SLOTS;
-      
-      // 加载分数
-      const savedScore = localStorage.getItem('ocean-score');
-      if (savedScore) {
-        game.score = parseInt(savedScore);
-      } else {
-        game.score = 30; // 默认初始给30积分
-      }
-      
-      // 首次解锁1级
-      if (!game.unlockedCreatures.includes(1)) {
-        game.unlockedCreatures.push(1);
-      }
-      
-      // 隐藏加载提示
-      document.getElementById('loading').style.display = 'none';
-      render();
+        
+        // 如果后端没有返回棋盘，走默认初始化
+        if (!game.board || game.board.every(row => row.every(cell => cell === null))) {
+          // 初始化生成三个生物：**两个固定1级磷虾，第三个随机**
+          let placed = 0;
+          // 放两个固定磷虾到最左下
+          for (let y = window.BOARD_SIZE - 1; y >= window.BOARD_SIZE - 2 && placed < 2; y--) {
+            for (let x = 0; x < 2 && placed < 2; x++) {
+              if (!game.board[y][x]) {
+                game.board[y][x] = 1; // 1 = 磷虾 id=1 level=1
+                placed++;
+              }
+            }
+          }
+          // 第三个随机生成
+          window.spawnRandomCreature(game.board, getCurrentMaxLevel());
+        }
+        
+        // 初始化小院
+        game.garden.slots = JSON.parse(localStorage.getItem('ocean-garden-slots')) || window.DEFAULT_SLOTS;
+        
+        // 首次解锁1级
+        if (!game.unlockedCreatures.includes(1)) {
+          game.unlockedCreatures.push(1);
+        }
+        
+        // 隐藏加载提示
+        document.getElementById('loading').style.display = 'none';
+        render();
+      });
     });
   });
 }
@@ -389,7 +416,16 @@ function handleMouseUp() {
     game.board[endCell.y][endCell.x] = game.board[dragCell.y][dragCell.x];
     game.board[dragCell.y][dragCell.x] = null;
     
-    saveGameState();
+    // 👉 保存游戏状态到后端
+    const userId = getApp().globalData.userId;
+    window.api.game.save(userId, game.board, game.score, function(result) {
+      console.log('[API] 保存移动后游戏状态返回:', result);
+      if (result && result.code !== 200) {
+        console.warn('[API] 保存状态失败:', result.message);
+      }
+    });
+    
+    saveGameState(); // 同时保存一份到localStorage做降级
     dragCell = null;
     isTouching = false;
     game.isDragging = false;
@@ -441,7 +477,15 @@ function handleMouseUp() {
           window.spawnRandomCreature(game.board, maxLevel);
         }
         
-        saveGameState();
+        // 👉 保存游戏状态到后端
+        window.api.game.save(userId, game.board, game.score, function(result) {
+          console.log('[API] 保存游戏状态返回:', result);
+          if (result && result.code !== 200) {
+            console.warn('[API] 保存状态失败:', result.message);
+          }
+        });
+        
+        saveGameState(); // 同时保存一份到localStorage做降级
         dragCell = null;
         isTouching = false;
         game.isDragging = false;
@@ -539,7 +583,16 @@ function arrangeBoard() {
     }
   }
   
-  saveGameState();
+  // 👉 保存游戏状态到后端
+  const userId = getApp().globalData.userId;
+  window.api.game.save(userId, game.board, game.score, function(result) {
+    console.log('[API] 保存整理后游戏状态返回:', result);
+    if (result && result.code !== 200) {
+      console.warn('[API] 保存状态失败:', result.message);
+    }
+  });
+  
+  saveGameState(); // 同时保存一份到localStorage做降级
   render();
 }
 
@@ -610,7 +663,16 @@ function doSpawnByScore(cost, emptyPositions) {
   const maxLevel = getCurrentMaxLevel();
   window.spawnRandomCreature(game.board, maxLevel);
 
-  saveGameState();
+  // 👉 保存游戏状态到后端
+  const userId = getApp().globalData.userId;
+  window.api.game.save(userId, game.board, game.score, function(result) {
+    console.log('[API] 保存生成后游戏状态返回:', result);
+    if (result && result.code !== 200) {
+      console.warn('[API] 保存状态失败:', result.message);
+    }
+  });
+
+  saveGameState(); // 同时保存一份到localStorage做降级
   updateScoreDisplay();
   render();
 }
