@@ -401,12 +401,12 @@ function handleMouseUp() {
   if (game.board[endCell.y][endCell.x]) {
     // 落点在另一个生物 - 检查能不能合并
     if (window.canMerge(game.board, dragCell.x, dragCell.y, endCell.x, endCell.y)) {
-      // 调用后端API执行合成
+      // 调用后端API执行合成 - 需要传两个生物ID
       const userId = getApp().globalData.userId;
-      const fromCell = {x: dragCell.x, y: dragCell.y};
-      const toCell = {x: endCell.x, y: endCell.y};
+      const creatureId1 = game.board[dragCell.y][dragCell.x];
+      const creatureId2 = game.board[endCell.y][endCell.x];
       
-      window.api.combine.doCombine(userId, fromCell, toCell, function(result) {
+      window.api.combine.doCombine(userId, creatureId1, creatureId2, function(result) {
         console.log('[API] 合成结果:', result);
         
         // 可以合并

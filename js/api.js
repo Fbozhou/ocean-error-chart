@@ -55,14 +55,14 @@ const user = {
 // 合成模块
 const combine = {
   // 执行合成操作
-  doCombine(userId, fromCell, toCell, callback) {
+  doCombine(userId, creatureId1, creatureId2, callback) {
     app.request({
       url: '/combine/do',
       method: 'POST',
       data: {
         userId,
-        fromCell,
-        toCell
+        creatureId1,
+        creatureId2
       },
       success: res => {
         callback && callback(res);

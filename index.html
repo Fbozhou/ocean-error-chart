@@ -153,16 +153,16 @@ window.app = {
   // API 请求封装 - 浏览器 fetch 实现
   request: function(options) {
     const url = options.url;
-    // 后端接口没有 /api 前缀，直接使用完整后端地址
-    const fullUrl = 'http://14.103.38.180:8080' + url;
+    // 使用 nginx 反向代理，避免跨域问题
+    // 前端和后端同域名同端口，不存在跨域
+    const fullUrl = '/api' + url;
     
     fetch(fullUrl, {
       method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: options.method === 'POST' ? JSON.stringify(options.data || {}) : undefined,
-      mode: 'cors'
+      body: options.method === 'POST' ? JSON.stringify(options.data || {}) : undefined
     })
     .then(response => response.json())
     .then(data => {
