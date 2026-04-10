@@ -5,7 +5,19 @@ const app = getApp();
 
 // 用户模块
 const user = {
-  // 微信登录（创建/获取用户）- web端也用这个接口创建游客用户
+  // web端创建测试/匿名用户
+  createTestUser(callback) {
+    app.request({
+      url: '/user/create-test-user',
+      method: 'POST',
+      data: {},
+      success: res => {
+        callback && callback(res);
+      }
+    });
+  },
+  
+  // 微信登录（创建/获取用户）
   wxLogin(data, callback) {
     app.request({
       url: '/user/wx-login',

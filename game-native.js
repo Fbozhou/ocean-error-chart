@@ -70,22 +70,18 @@ function initGame() {
     console.log('[API] 使用本地保存的 userId:', savedUserId);
     initGameAfterLogin();
   } else {
-    // 没有userId，调用wx-login创建用户
-    window.api.user.wxLogin({
-      code: 'web-anonymous-' + Date.now(),
-      nickname: '网页游客',
-      avatarUrl: ''
-    }, function(result) {
-      console.log('[API] wx-login 返回:', result);
+    // 没有userId，调用create-test-user创建web游客用户
+    window.api.user.createTestUser(function(result) {
+      console.log('[API] create-test-user 返回:', result);
       if (result && result.code === 200 && result.data && result.data.userId) {
         const userId = result.data.userId;
         getApp().globalData.userId = userId;
         localStorage.setItem('ocean-userId', userId);
-        console.log('[API] 新用户创建成功，userId:', userId);
+        console.log('[API] 新游客用户创建成功，userId:', userId);
       } else {
-        // 登录失败，使用默认游客userId=1
+        // 创建失败，使用默认游客userId=1
         getApp().globalData.userId = 1;
-        console.log('[API] 登录失败，使用默认 userId=1');
+        console.log('[API] 创建失败，使用默认 userId=1');
       }
       initGameAfterLogin();
     });
