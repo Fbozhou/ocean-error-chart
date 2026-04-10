@@ -62,79 +62,100 @@ function initGame() {
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
   
-  // 微信登录 - 获取/创建用户
-  window.api.user.wxLogin({
-    code: 'test-code-' + Date.now(),
-    nickname: '浏览器用户',
-    avatarUrl: ''
-  }, function(data) {
-    console.log('[API] 微信登录返回:', data);
-    if (data && data.userId) {
-      getApp().globalData.userId = data.userId;
+  // 尝试从本地读取userId，如果没有则创建匿名用户
+  let savedUserId = localStorage.getItem('ocean-userId');
+  if (savedUserId) {
+    // 本地已有userId，直接使用
+    getApp().globalData.userId = parseInt(savedUserId);
+    console.log('[API] 使用本地保存的 userId:', savedUserId);
+    initGameAfterLogin();
+  } else {
+    // 没有userId，调用wx-login创建用户
+    window.api.user.wxLogin({
+      code: 'web-anonymous-' + Date.now(),
+      nickname: '网页游客',
+      avatarUrl: ''
+    }, function(result) {
+      console.log('[API] wx-login 返回:', result);
+      if (result && result.code === 200 && result.data && result.data.userId) {
+        const userId = result.data.userId;
+        getApp().globalData.userId = userId;
+        localStorage.setItem('ocean-userId', userId);
+        console.log('[API] 新用户创建成功，userId:', userId);
+      } else {
+        // 登录失败，使用默认游客userId=1
+        getApp().globalData.userId = 1;
+        console.log('[API] 登录失败，使用默认 userId=1');
+      }
+      initGameAfterLogin();
+    });
+  }
+}
+
+// 登录完成后初始化游戏数据
+function initGameAfterLogin() {
+  const userId = getApp().globalData.userId;
+  
+  // 获取全量生物配置
+  window.api.combine.getAllList(function(result) {
+    console.log('[API] 获取全量生物列表返回:', result);
+    
+    // 如果后端返回了生物数据，用后端的，否则用本地的
+    if (result && result.code === 200 && result.data && Array.isArray(result.data) && result.data.length > 0) {
+      // 更新本地 CREATURE_DATA
+      window.CREATURE_DATA = result.data;
+      console.log('[API] 使用后端生物数据，共', result.data.length, '个');
     }
     
-    // 获取全量生物配置
-    window.api.combine.getAllList(function(data) {
-      console.log('[API] 获取全量生物列表返回:', data);
+    // 获取用户已解锁生物列表
+    window.api.combine.getUserList(userId, function(result) {
+      console.log('[API] 获取用户已解锁生物返回:', result);
       
-      // 如果后端返回了生物数据，用后端的，否则用本地的
-      if (data && data.list && Array.isArray(data.list) && data.list.length > 0) {
-        // 更新本地 CREATURE_DATA
-        window.CREATURE_DATA = data.list;
-        console.log('[API] 使用后端生物数据，共', data.list.length, '个');
+      // 初始化棋盘 - 必须在resize/render之前！
+      game.board = window.createEmptyBoard();
+      
+      // 从后端加载用户已解锁生物
+      if (result && result.code === 200 && result.data && Array.isArray(result.data)) {
+        game.unlockedCreatures = result.data;
+        console.log('[API] 用户已解锁生物:', result.data.length, '个');
+      } else {
+        // 初始解锁 1级磷虾
+        game.unlockedCreatures = [1];
       }
       
-      // 获取用户已解锁生物列表
-      const userId = getApp().globalData.userId;
-      window.api.combine.getUserList(userId, function(data) {
-        console.log('[API] 获取用户已解锁生物返回:', data);
-        
-        // 初始化棋盘 - 必须在resize/render之前！
-        game.board = window.createEmptyBoard();
-        
-        // 从后端加载用户已解锁生物
-        if (data && data.unlocked && Array.isArray(data.unlocked)) {
-          game.unlockedCreatures = data.unlocked;
-          console.log('[API] 用户已解锁生物:', data.unlocked.length, '个');
-        } else {
-          // 初始解锁所有1-2级
-          game.unlockedCreatures = [1, 2];
-        }
-        
-        // 初始化生成三个生物：**两个固定1级磷虾，第三个随机**
-        let placed = 0;
-        // 放两个固定磷虾到最左下
-        for (let y = window.BOARD_SIZE - 1; y >= window.BOARD_SIZE - 2 && placed < 2; y--) {
-          for (let x = 0; x < 2 && placed < 2; x++) {
-            if (!game.board[y][x]) {
-              game.board[y][x] = 1; // 1 = 磷虾 id=1 level=1
-              placed++;
-            }
+      // 初始化生成三个生物：**两个固定1级磷虾，第三个随机**
+      let placed = 0;
+      // 放两个固定磷虾到最左下
+      for (let y = window.BOARD_SIZE - 1; y >= window.BOARD_SIZE - 2 && placed < 2; y--) {
+        for (let x = 0; x < 2 && placed < 2; x++) {
+          if (!game.board[y][x]) {
+            game.board[y][x] = 1; // 1 = 磷虾 id=1 level=1
+            placed++;
           }
         }
-        // 第三个随机生成
-        window.spawnRandomCreature(game.board, getCurrentMaxLevel());
-        
-        // 初始化小院
-        game.garden.slots = JSON.parse(localStorage.getItem('ocean-garden-slots')) || window.DEFAULT_SLOTS;
-        
-        // 加载分数
-        const savedScore = localStorage.getItem('ocean-score');
-        if (savedScore) {
-          game.score = parseInt(savedScore);
-        } else {
-          game.score = 30; // 默认初始给30积分
-        }
-        
-        // 首次解锁1级
-        if (!game.unlockedCreatures.includes(1)) {
-          game.unlockedCreatures.push(1);
-        }
-        
-        // 隐藏加载提示
-        document.getElementById('loading').style.display = 'none';
-        render();
-      });
+      }
+      // 第三个随机生成
+      window.spawnRandomCreature(game.board, getCurrentMaxLevel());
+      
+      // 初始化小院
+      game.garden.slots = JSON.parse(localStorage.getItem('ocean-garden-slots')) || window.DEFAULT_SLOTS;
+      
+      // 加载分数
+      const savedScore = localStorage.getItem('ocean-score');
+      if (savedScore) {
+        game.score = parseInt(savedScore);
+      } else {
+        game.score = 30; // 默认初始给30积分
+      }
+      
+      // 首次解锁1级
+      if (!game.unlockedCreatures.includes(1)) {
+        game.unlockedCreatures.push(1);
+      }
+      
+      // 隐藏加载提示
+      document.getElementById('loading').style.display = 'none';
+      render();
     });
   });
 }

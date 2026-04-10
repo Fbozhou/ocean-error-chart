@@ -5,7 +5,7 @@ const app = getApp();
 
 // 用户模块
 const user = {
-  // 微信登录（创建/获取用户）
+  // 微信登录（创建/获取用户）- web端也用这个接口创建游客用户
   wxLogin(data, callback) {
     app.request({
       url: '/user/wx-login',
