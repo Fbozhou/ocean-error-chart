@@ -153,21 +153,24 @@ window.app = {
   // API 请求封装 - 浏览器 fetch 实现
   request: function(options) {
     const url = options.url;
-    const fullUrl = window.location.origin + '/api' + url;
+    // 后端接口没有 /api 前缀，直接使用完整后端地址
+    const fullUrl = 'http://14.103.38.180:8080' + url;
     
     fetch(fullUrl, {
       method: options.method || 'GET',
       headers: {
         'Content-Type': 'application/json',
       },
-      body: options.method === 'POST' ? JSON.stringify(options.data || {}) : undefined
+      body: options.method === 'POST' ? JSON.stringify(options.data || {}) : undefined,
+      mode: 'cors'
     })
     .then(response => response.json())
     .then(data => {
+      console.log('[API] 请求成功:', url, data);
       options.success && options.success(data);
     })
     .catch(error => {
-      console.error('[API] 请求失败:', error);
+      console.error('[API] 请求失败:', url, error);
       options.fail && options.fail(error);
     });
   }

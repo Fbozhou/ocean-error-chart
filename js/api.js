@@ -5,6 +5,18 @@ const app = getApp();
 
 // 用户模块
 const user = {
+  // 微信登录（创建/获取用户）
+  wxLogin(data, callback) {
+    app.request({
+      url: '/user/wx-login',
+      method: 'POST',
+      data: data,
+      success: res => {
+        callback && callback(res);
+      }
+    });
+  },
+  
   // 获取用户信息
   getInfo(userId, callback) {
     app.request({
@@ -31,17 +43,17 @@ const user = {
 // 合成模块
 const combine = {
   // 执行合成操作
-  doCombine(userId, creatureId1, creatureId2, callback) {
+  doCombine(userId, fromCell, toCell, callback) {
     app.request({
       url: '/combine/do',
       method: 'POST',
       data: {
         userId,
-        creatureId1,
-        creatureId2
+        fromCell,
+        toCell
       },
       success: res => {
-        callback && callback(res.data);
+        callback && callback(res);
       }
     });
   },
@@ -52,7 +64,7 @@ const combine = {
       url: `/combine/user-list/${userId}`,
       method: 'GET',
       success: res => {
-        callback && callback(res.data);
+        callback && callback(res);
       }
     });
   },
@@ -63,7 +75,7 @@ const combine = {
       url: '/combine/all-list',
       method: 'GET',
       success: res => {
-        callback && callback(res.data);
+        callback && callback(res);
       }
     });
   },
@@ -82,6 +94,21 @@ const combine = {
 
 // 钓鱼奇遇模块
 const fish = {
+  // 开始钓鱼
+  startFish(userId, seaAreaId, callback) {
+    app.request({
+      url: '/fish/start',
+      method: 'POST',
+      data: {
+        userId,
+        seaAreaId
+      },
+      success: res => {
+        callback && callback(res);
+      }
+    });
+  },
+
   // 执行钓鱼
   doFish(userId, callback) {
     app.request({

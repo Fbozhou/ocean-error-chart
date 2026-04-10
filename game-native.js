@@ -58,55 +58,85 @@ function initGame() {
   game.canvas.addEventListener('mousemove', handleMouseMove);
   game.canvas.addEventListener('mouseup', handleMouseUp);
   
-  // 初始化棋盘 - 必须在resize/render之前！
-  game.board = window.createEmptyBoard();
-  // 初始化生成三个生物：**两个固定1级磷虾，第三个随机**
-  let placed = 0;
-  // 放两个固定磷虾到最左下
-  for (let y = window.BOARD_SIZE - 1; y >= window.BOARD_SIZE - 2 && placed < 2; y--) {
-    for (let x = 0; x < 2 && placed < 2; x++) {
-      if (!game.board[y][x]) {
-        game.board[y][x] = 1; // 1 = 磷虾 id=1 level=1
-        placed++;
-      }
-    }
-  }
-  // 第三个随机生成
-  window.spawnRandomCreature(game.board, getCurrentMaxLevel());
-  
-  // 适配屏幕 - 现在board已经初始化了，可以安全渲染
+  // 适配屏幕
   resizeCanvas();
   window.addEventListener('resize', resizeCanvas);
   
-  // 初始解锁所有1-2级
-  game.unlockedCreatures = [1, 2];
-  
-  // 初始化小院
-  game.garden.slots = JSON.parse(localStorage.getItem('ocean-garden-slots')) || window.DEFAULT_SLOTS;
-  
-  // 加载分数
-  const savedScore = localStorage.getItem('ocean-score');
-  if (savedScore) {
-    game.score = parseInt(savedScore);
-  } else {
-    game.score = 30; // 默认初始给30积分
-  }
-  
-  // 加载解锁记录
-  const savedUnlocked = localStorage.getItem('ocean-unlocked');
-  if (savedUnlocked) {
-    try {
-      game.unlockedCreatures = JSON.parse(savedUnlocked);
-    } catch(e) {}
-  }
-  
-  // 首次解锁1级
-  if (!game.unlockedCreatures.includes(1)) {
-    game.unlockedCreatures.push(1);
-  }
-  
-  // 隐藏加载提示
-  document.getElementById('loading').style.display = 'none';
+  // 微信登录 - 获取/创建用户
+  window.api.user.wxLogin({
+    code: 'test-code-' + Date.now(),
+    nickname: '浏览器用户',
+    avatarUrl: ''
+  }, function(data) {
+    console.log('[API] 微信登录返回:', data);
+    if (data && data.userId) {
+      getApp().globalData.userId = data.userId;
+    }
+    
+    // 获取全量生物配置
+    window.api.combine.getAllList(function(data) {
+      console.log('[API] 获取全量生物列表返回:', data);
+      
+      // 如果后端返回了生物数据，用后端的，否则用本地的
+      if (data && data.list && Array.isArray(data.list) && data.list.length > 0) {
+        // 更新本地 CREATURE_DATA
+        window.CREATURE_DATA = data.list;
+        console.log('[API] 使用后端生物数据，共', data.list.length, '个');
+      }
+      
+      // 获取用户已解锁生物列表
+      const userId = getApp().globalData.userId;
+      window.api.combine.getUserList(userId, function(data) {
+        console.log('[API] 获取用户已解锁生物返回:', data);
+        
+        // 初始化棋盘 - 必须在resize/render之前！
+        game.board = window.createEmptyBoard();
+        
+        // 从后端加载用户已解锁生物
+        if (data && data.unlocked && Array.isArray(data.unlocked)) {
+          game.unlockedCreatures = data.unlocked;
+          console.log('[API] 用户已解锁生物:', data.unlocked.length, '个');
+        } else {
+          // 初始解锁所有1-2级
+          game.unlockedCreatures = [1, 2];
+        }
+        
+        // 初始化生成三个生物：**两个固定1级磷虾，第三个随机**
+        let placed = 0;
+        // 放两个固定磷虾到最左下
+        for (let y = window.BOARD_SIZE - 1; y >= window.BOARD_SIZE - 2 && placed < 2; y--) {
+          for (let x = 0; x < 2 && placed < 2; x++) {
+            if (!game.board[y][x]) {
+              game.board[y][x] = 1; // 1 = 磷虾 id=1 level=1
+              placed++;
+            }
+          }
+        }
+        // 第三个随机生成
+        window.spawnRandomCreature(game.board, getCurrentMaxLevel());
+        
+        // 初始化小院
+        game.garden.slots = JSON.parse(localStorage.getItem('ocean-garden-slots')) || window.DEFAULT_SLOTS;
+        
+        // 加载分数
+        const savedScore = localStorage.getItem('ocean-score');
+        if (savedScore) {
+          game.score = parseInt(savedScore);
+        } else {
+          game.score = 30; // 默认初始给30积分
+        }
+        
+        // 首次解锁1级
+        if (!game.unlockedCreatures.includes(1)) {
+          game.unlockedCreatures.push(1);
+        }
+        
+        // 隐藏加载提示
+        document.getElementById('loading').style.display = 'none';
+        render();
+      });
+    });
+  });
 }
 
 // 调整画布大小 - 底部留出60px给按钮组
@@ -354,43 +384,52 @@ function handleMouseUp() {
   if (game.board[endCell.y][endCell.x]) {
     // 落点在另一个生物 - 检查能不能合并
     if (window.canMerge(game.board, dragCell.x, dragCell.y, endCell.x, endCell.y)) {
-      // 可以合并
-      const merged = window.doMerge(game.board, dragCell.x, dragCell.y, endCell.x, endCell.y);
-      game.score += window.calculateScore(merged.level);
+      // 调用后端API执行合成
+      const userId = getApp().globalData.userId;
+      const fromCell = {x: dragCell.x, y: dragCell.y};
+      const toCell = {x: endCell.x, y: endCell.y};
       
-      // 解锁新生物
-      if (!game.unlockedCreatures.includes(merged.id)) {
-        game.unlockedCreatures.push(merged.id);
-        saveUnlocked();
-        // 震动
-        if ('vibrate' in navigator) navigator.vibrate(100);
-        setTimeout(() => {
-          alert(`🎉 解锁新生物：${merged.name}！`);
-        }, 300);
-      }
-      
-      // 合并完成，起点清空，终点放合并后的新生物
-      game.board[dragCell.y][dragCell.x] = null;
-      game.board[endCell.y][endCell.x] = merged.id;
-      
-      // 👉 需求：合并成功后，在随机空单元格自动生成一个新生物
-      // 找所有空位，随机选一个生成
-      const empty = [];
-      for (let y = 0; y < window.BOARD_SIZE; y++) {
-        for (let x = 0; x < window.BOARD_SIZE; x++) {
-          if (!game.board[y][x]) empty.push({x, y});
+      window.api.combine.doCombine(userId, fromCell, toCell, function(result) {
+        console.log('[API] 合成结果:', result);
+        
+        // 可以合并
+        const merged = window.doMerge(game.board, dragCell.x, dragCell.y, endCell.x, endCell.y);
+        game.score += window.calculateScore(merged.level);
+        
+        // 解锁新生物
+        if (!game.unlockedCreatures.includes(merged.id)) {
+          game.unlockedCreatures.push(merged.id);
+          saveUnlocked();
+          // 震动
+          if ('vibrate' in navigator) navigator.vibrate(100);
+          setTimeout(() => {
+            alert(`🎉 解锁新生物：${merged.name}！`);
+          }, 300);
         }
-      }
-      if (empty.length > 0) {
-        const maxLevel = getCurrentMaxLevel();
-        window.spawnRandomCreature(game.board, maxLevel);
-      }
-      
-      saveGameState();
-      dragCell = null;
-      isTouching = false;
-      game.isDragging = false;
-      render();
+        
+        // 合并完成，起点清空，终点放合并后的新生物
+        game.board[dragCell.y][dragCell.x] = null;
+        game.board[endCell.y][endCell.x] = merged.id;
+        
+        // 👉 需求：合并成功后，在随机空单元格自动生成一个新生物
+        // 找所有空位，随机选一个生成
+        const empty = [];
+        for (let y = 0; y < window.BOARD_SIZE; y++) {
+          for (let x = 0; x < window.BOARD_SIZE; x++) {
+            if (!game.board[y][x]) empty.push({x, y});
+          }
+        }
+        if (empty.length > 0) {
+          const maxLevel = getCurrentMaxLevel();
+          window.spawnRandomCreature(game.board, maxLevel);
+        }
+        
+        saveGameState();
+        dragCell = null;
+        isTouching = false;
+        game.isDragging = false;
+        render();
+      });
       return;
     }
     
